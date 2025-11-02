@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Menu, X } from "lucide-react";
+import { Moon, Sun, Menu, X, Mail, Phone } from "lucide-react";
 import { useState, useEffect } from "react";
 import logo from "@/assets/logo.avif";
 
@@ -50,21 +50,23 @@ export const Navigation = () => {
 
   return (
     <>
-      <div className="hidden md:block bg-primary text-primary-foreground py-2">
+      <div className="hidden md:block bg-primary text-primary-foreground py-2 shadow-sm">
         <div className="container mx-auto px-4 flex justify-end items-center gap-6 text-sm">
-          <a href="mailto:info@gmrindia.com" className="hover:opacity-80 transition-opacity">
+          <a href="mailto:info@gmrindia.com" className="hover:opacity-80 transition-all flex items-center gap-2">
+            <Mail className="h-4 w-4" />
             info@gmrindia.com
           </a>
-          <a href="tel:+919871209393" className="hover:opacity-80 transition-opacity">
+          <a href="tel:+919871209393" className="hover:opacity-80 transition-all flex items-center gap-2">
+            <Phone className="h-4 w-4" />
             +91 98712 09393
           </a>
         </div>
       </div>
 
-      <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b">
+      <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b shadow-sm">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center">
+            <Link to="/" className="flex items-center hover:opacity-90 transition-opacity">
               <img src={logo} alt="GMR & Associates" className="h-12" />
             </Link>
 
@@ -73,10 +75,10 @@ export const Navigation = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
                     location.pathname === link.path
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-secondary"
+                      ? "bg-primary text-primary-foreground shadow-primary"
+                      : "text-foreground hover:bg-secondary hover:text-primary"
                   }`}
                 >
                   {link.name}

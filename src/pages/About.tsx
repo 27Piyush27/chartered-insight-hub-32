@@ -28,12 +28,13 @@ export default function About() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="py-20 gradient-hero text-white">
-        <div className="container mx-auto px-4 text-center">
+      <section className="py-20 gradient-hero text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
+        <div className="container mx-auto px-4 relative z-10 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6 animate-slide-up">
             About GMR & Associates
           </h1>
-          <p className="text-xl max-w-3xl mx-auto opacity-95 animate-fade-in">
+          <p className="text-xl max-w-3xl mx-auto opacity-95 animate-fade-in leading-relaxed">
             Established in 2011, we are a premier chartered accountancy firm dedicated to providing
             comprehensive professional services. We merge deep domain expertise with innovative
             technology to deliver unparalleled value to our clients across India.
@@ -45,9 +46,9 @@ export default function About() {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            <Card className="shadow-card animate-slide-up">
+            <Card className="shadow-card hover:shadow-glow transition-all duration-300 animate-slide-up border-t-4 border-t-primary">
               <CardContent className="p-8">
-                <h2 className="text-2xl font-bold mb-4 text-primary">Our Mission</h2>
+                <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent">Our Mission</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   To empower businesses with accurate, timely financial insights and compliance
                   solutions through the perfect blend of professional expertise and AI-driven
@@ -57,9 +58,9 @@ export default function About() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-card animate-slide-up" style={{ animationDelay: "0.1s" }}>
+            <Card className="shadow-card hover:shadow-glow transition-all duration-300 animate-slide-up border-t-4 border-t-accent" style={{ animationDelay: "0.1s" }}>
               <CardContent className="p-8">
-                <h2 className="text-2xl font-bold mb-4 text-primary">Our Vision</h2>
+                <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Our Vision</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   To be recognized as India's leading chartered accountancy firm that sets the
                   standard for innovation, quality, and client satisfaction. We envision a future
@@ -73,7 +74,7 @@ export default function About() {
       </section>
 
       {/* Values Section */}
-      <section className="py-20 bg-secondary">
+      <section className="py-20 bg-gradient-to-br from-secondary/30 to-secondary/60">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Core Values</h2>
@@ -86,12 +87,12 @@ export default function About() {
             {values.map((value, index) => (
               <div
                 key={index}
-                className="text-center animate-fade-in"
+                className="text-center animate-fade-in hover:scale-105 transition-transform duration-300 p-6 rounded-xl bg-background/50 backdrop-blur-sm shadow-card"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <div className="inline-flex items-center justify-center mb-4">{value.icon}</div>
+                <div className="inline-flex items-center justify-center mb-4 bg-gradient-to-br from-primary/10 to-primary-light/10 p-4 rounded-xl">{value.icon}</div>
                 <h3 className="text-xl font-semibold mb-2">{value.title}</h3>
-                <p className="text-muted-foreground">{value.desc}</p>
+                <p className="text-muted-foreground text-sm">{value.desc}</p>
               </div>
             ))}
           </div>

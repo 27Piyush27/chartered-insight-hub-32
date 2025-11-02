@@ -3,19 +3,19 @@ import logo from "@/assets/logo.avif";
 
 export const Footer = () => {
   return (
-    <footer className="bg-secondary mt-20 py-12 border-t">
+    <footer className="bg-secondary/50 backdrop-blur-sm mt-20 py-12 border-t">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
+          <div className="animate-fade-in">
             <img src={logo} alt="GMR & Associates" className="h-12 mb-4" />
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-sm leading-relaxed">
               A leading chartered accountancy firm providing comprehensive professional services with
               innovative AI-powered solutions.
             </p>
           </div>
 
-          <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
+          <div className="animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            <h3 className="font-semibold mb-4 text-primary">Quick Links</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link to="/about" className="text-muted-foreground hover:text-primary transition-colors">
@@ -40,8 +40,8 @@ export const Footer = () => {
             </ul>
           </div>
 
-          <div>
-            <h3 className="font-semibold mb-4">Our Services</h3>
+          <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            <h3 className="font-semibold mb-4 text-primary">Our Services</h3>
             <ul className="space-y-2 text-sm">
               <li className="text-muted-foreground">Accounting</li>
               <li className="text-muted-foreground">Auditing</li>
@@ -49,8 +49,8 @@ export const Footer = () => {
             </ul>
           </div>
 
-          <div>
-            <h3 className="font-semibold mb-4">Contact Information</h3>
+          <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            <h3 className="font-semibold mb-4 text-primary">Contact Information</h3>
             <div className="space-y-2 text-sm text-muted-foreground">
               <p>
                 <strong>Gurgaon:</strong> H.No.43, SF, Sector-7
