@@ -18,6 +18,24 @@ export default function About() {
     },
   ];
 
+  const partners = [
+    {
+      name: "Gaurav Makkar",
+      title: "",
+      desc: "An expert in capital markets and statutory audits, Mr. Makkar has a sound financial and accounting background, assisting numerous SMEs with project financing from nationalised banks.",
+    },
+    {
+      name: "Mohit Gupta",
+      title: "FCA, LLB",
+      desc: "With 10+ years of experience, Mr. Gupta specializes in Taxation and the NGO sector. He provides expert consultancy and handles complex GST cases, searches, and appeals.",
+    },
+    {
+      name: "Saurabh Madan",
+      title: "",
+      desc: "Mr. Madan brings a wealth of knowledge in corporate finance and advisory, helping businesses navigate complex financial landscapes and achieve sustainable growth.",
+    },
+  ];
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -99,12 +117,13 @@ export default function About() {
         <div className="container mx-auto px-6 lg:px-12">
           <div className="max-w-3xl mx-auto">
             <p className="text-sm tracking-widest text-muted-foreground uppercase mb-6">
-              Our Story
+              About GMR & Associates
             </p>
             <div className="space-y-8 text-lg leading-relaxed">
               <p>
-                GMR & Associates began with a conviction: that every business, 
-                regardless of size, deserves access to exceptional financial guidance.
+                Established in 2011, we are a premier chartered accountancy firm dedicated 
+                to providing comprehensive professional services. We merge deep domain expertise 
+                with innovative technology to deliver unparalleled value to our clients across India.
               </p>
               <p className="text-muted-foreground">
                 Over thirteen years, we've remained steadfast in this belief. We've 
@@ -116,12 +135,41 @@ export default function About() {
                 something more fundamental—the relationships we build and the results 
                 we deliver, year after year.
               </p>
-              <p>
-                Today, we continue to evolve, integrating thoughtful technology where 
-                it serves our clients, while never losing sight of what matters most: 
-                the human judgment, expertise, and dedication that no algorithm can replace.
-              </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Partners Section */}
+      <section className="py-24 md:py-32">
+        <div className="container mx-auto px-6 lg:px-12">
+          <div className="max-w-2xl mb-16 text-center mx-auto">
+            <p className="text-sm tracking-widest text-muted-foreground uppercase mb-4">
+              Leadership
+            </p>
+            <h2 className="text-3xl md:text-4xl">
+              Our Partners
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {partners.map((partner, index) => (
+              <div
+                key={index}
+                className="text-center p-8 border border-border/50 bg-background"
+              >
+                <div className="w-24 h-24 rounded-full bg-secondary/50 mx-auto mb-6" />
+                <h3 className="text-xl mb-1">
+                  {partner.name}
+                  {partner.title && (
+                    <span className="text-muted-foreground text-base font-normal">, {partner.title}</span>
+                  )}
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mt-4">
+                  {partner.desc}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

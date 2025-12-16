@@ -133,9 +133,9 @@ export const services: Service[] = [
   },
   {
     id: "tax",
-    icon: "Receipt",
+    icon: "Percent",
     title: "Tax Advisory & Compliance",
-    desc: "Strategic tax planning, compliance, and advisory services to minimize liabilities while ensuring full regulatory compliance.",
+    desc: "Strategic advice on direct (Income Tax) and indirect (GST) taxation to optimize your financial position and ensure full compliance.",
     features: [
       {
         icon: "FileText",
@@ -184,6 +184,174 @@ export const services: Service[] = [
       {
         q: "Do you handle TDS returns?",
         a: "Yes, we manage all aspects of TDS including deduction, payment, and return filing.",
+      },
+    ],
+  },
+  {
+    id: "company-law",
+    icon: "Gavel",
+    title: "Company Law & Secretarial",
+    desc: "Expert assistance with company incorporation (Pvt Ltd, LLP), ROC filings, and maintenance of statutory records.",
+    features: [
+      {
+        icon: "Building",
+        title: "Company Incorporation",
+        text: "End-to-end support for Pvt Ltd, LLP, and other entity formations.",
+      },
+      {
+        icon: "FileText",
+        title: "ROC Filings",
+        text: "Timely and accurate filing of all ROC compliance requirements.",
+      },
+      {
+        icon: "BookOpen",
+        title: "Statutory Records",
+        text: "Maintenance of registers, minutes, and statutory books.",
+      },
+      {
+        icon: "RefreshCw",
+        title: "Annual Compliance",
+        text: "Complete annual return filings and board meeting compliance.",
+      },
+    ],
+    timeline: [
+      {
+        title: "Initial Consultation",
+        text: "Understand your business structure and compliance needs.",
+      },
+      {
+        title: "Documentation",
+        text: "Prepare and file all necessary documents with authorities.",
+      },
+      {
+        title: "Registration",
+        text: "Complete incorporation or filing process with ROC.",
+      },
+      {
+        title: "Ongoing Compliance",
+        text: "Regular compliance calendar and timely filings.",
+      },
+    ],
+    faqs: [
+      {
+        q: "How long does company incorporation take?",
+        a: "Typically 7-15 days depending on the type of entity and document readiness.",
+      },
+      {
+        q: "Do you handle LLP conversions?",
+        a: "Yes, we assist with conversions from partnership to LLP and vice versa.",
+      },
+    ],
+  },
+  {
+    id: "payroll",
+    icon: "Users",
+    title: "Payroll Management",
+    desc: "End-to-end payroll processing, including salary structuring, TDS compliance, and statutory filings (PF, ESI).",
+    features: [
+      {
+        icon: "DollarSign",
+        title: "Salary Processing",
+        text: "Accurate monthly salary computation and disbursement.",
+      },
+      {
+        icon: "FileCheck",
+        title: "TDS Compliance",
+        text: "Complete TDS deduction, payment, and return filing.",
+      },
+      {
+        icon: "Shield",
+        title: "PF & ESI",
+        text: "Registration, monthly contributions, and compliance management.",
+      },
+      {
+        icon: "FileText",
+        title: "Pay Slips & Reports",
+        text: "Detailed pay slips and comprehensive payroll reports.",
+      },
+    ],
+    timeline: [
+      {
+        title: "Setup & Configuration",
+        text: "Configure payroll structure, components, and compliance requirements.",
+      },
+      {
+        title: "Monthly Processing",
+        text: "Process salaries, deductions, and statutory contributions.",
+      },
+      {
+        title: "Compliance Filings",
+        text: "Timely filing of PF, ESI, and TDS returns.",
+      },
+      {
+        title: "Year-End Processing",
+        text: "Annual salary statements and Form 16 generation.",
+      },
+    ],
+    faqs: [
+      {
+        q: "Do you handle statutory registrations?",
+        a: "Yes, we help with PF, ESI, and Professional Tax registrations.",
+      },
+      {
+        q: "Can you manage payroll for contract staff?",
+        a: "Yes, we handle payroll for permanent, contract, and temporary staff.",
+      },
+    ],
+  },
+  {
+    id: "finance-advisory",
+    icon: "TrendingUp",
+    title: "Finance & Project Advisory",
+    desc: "Reliable consulting for project financing, business valuations, due diligence, and financial modeling for strategic decisions.",
+    features: [
+      {
+        icon: "Target",
+        title: "Project Financing",
+        text: "Assistance with project reports and financing from banks/NBFCs.",
+      },
+      {
+        icon: "BarChart3",
+        title: "Business Valuation",
+        text: "Comprehensive valuation for M&A, investment, or compliance purposes.",
+      },
+      {
+        icon: "Search",
+        title: "Due Diligence",
+        text: "Financial and legal due diligence for acquisitions and investments.",
+      },
+      {
+        icon: "LineChart",
+        title: "Financial Modeling",
+        text: "Detailed financial projections and scenario analysis.",
+      },
+    ],
+    timeline: [
+      {
+        title: "Requirement Analysis",
+        text: "Understand your project or transaction requirements.",
+      },
+      {
+        title: "Data Collection",
+        text: "Gather financial and operational data for analysis.",
+      },
+      {
+        title: "Analysis & Modeling",
+        text: "Perform detailed analysis and prepare reports.",
+      },
+      {
+        title: "Presentation & Support",
+        text: "Present findings and support implementation.",
+      },
+    ],
+    faqs: [
+      {
+        q: "What valuation methods do you use?",
+        a: "We use DCF, comparable company analysis, and asset-based methods as appropriate.",
+      },
+      {
+        q: "Do you help with loan applications?",
+        a: "Yes, we prepare project reports and assist with bank/NBFC financing.",
       },
     ],
   },
