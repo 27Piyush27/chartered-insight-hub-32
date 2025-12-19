@@ -12,6 +12,7 @@ import {
   Calendar,
   TrendingUp,
   User,
+  CreditCard,
 } from "lucide-react";
 
 interface ServiceRequest {
@@ -203,14 +204,29 @@ export default function Dashboard() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-primary" />
+                Make Payment
+              </CardTitle>
+              <CardDescription>Pay for services securely via Razorpay</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => navigate("/payments")} className="w-full">
+                Go to Payments
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle>Need Help?</CardTitle>
               <CardDescription>Get in touch with our support team</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => navigate("/contact")} className="w-full">
+              <Button onClick={() => navigate("/contact")} variant="outline" className="w-full">
                 Contact Support
               </Button>
             </CardContent>
