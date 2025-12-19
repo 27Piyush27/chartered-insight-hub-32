@@ -22,8 +22,11 @@ export const Navigation = () => {
       const user = JSON.parse(currentUser);
       setIsLoggedIn(true);
       setUsername(user.name || user.email);
+    } else {
+      setIsLoggedIn(false);
+      setUsername("");
     }
-  }, []);
+  }, [location.pathname]);
 
   const toggleTheme = () => {
     const newDark = !isDark;
