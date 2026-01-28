@@ -10,6 +10,8 @@ import Home from "./pages/Home";
 import About from "./pages/About";
 import Services from "./pages/Services";
 import ServiceDetail from "./pages/ServiceDetail";
+import ServiceCheckout from "./pages/ServiceCheckout";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
@@ -31,6 +33,8 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/services" element={<Services />} />
             <Route path="/services/:serviceId" element={<ServiceDetail />} />
+            <Route path="/checkout/:serviceId" element={<ServiceCheckout />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/payments" element={<Payments />} />
