@@ -24,7 +24,9 @@ interface Notification {
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending", color: "bg-yellow-500" },
   "in-progress": { label: "In Progress", color: "bg-blue-500" },
-  completed: { label: "Completed", color: "bg-green-500" },
+  in_progress: { label: "In Progress", color: "bg-blue-500" },
+  completed: { label: "Ready to Pay", color: "bg-green-500" },
+  paid: { label: "Paid", color: "bg-green-600" },
   cancelled: { label: "Cancelled", color: "bg-destructive" },
 };
 

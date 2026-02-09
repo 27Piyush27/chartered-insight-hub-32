@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -21,6 +20,12 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Use service role key to update service_request status (bypasses RLS)
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -66,7 +71,6 @@ serve(async (req) => {
     if (expectedSignature !== razorpay_signature) {
       console.error("Signature verification failed");
       
-      // Update payment as failed
       await supabase
         .from("payments")
         .update({
@@ -101,6 +105,23 @@ serve(async (req) => {
         JSON.stringify({ error: "Failed to update payment status" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // CRITICAL: Update service_request status to "paid" to lock the service and prevent duplicate payments
+    if (payment?.service_request_id) {
+      console.log("Updating service request status to paid:", payment.service_request_id);
+      
+      const { error: srUpdateError } = await supabaseAdmin
+        .from("service_requests")
+        .update({ status: "paid", progress: 100 })
+        .eq("id", payment.service_request_id);
+
+      if (srUpdateError) {
+        console.error("Failed to update service request status:", srUpdateError);
+        // Don't fail the payment verification, just log the error
+      } else {
+        console.log("Service request marked as paid successfully");
+      }
     }
 
     console.log("Payment verified successfully:", payment_id);

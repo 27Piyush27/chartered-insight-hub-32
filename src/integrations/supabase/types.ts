@@ -105,8 +105,10 @@ export type Database = {
       }
       service_requests: {
         Row: {
+          amount: number | null
           assigned_ca: string | null
           created_at: string
+          document_url: string | null
           id: string
           notes: string | null
           progress: number
@@ -116,8 +118,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          amount?: number | null
           assigned_ca?: string | null
           created_at?: string
+          document_url?: string | null
           id?: string
           notes?: string | null
           progress?: number
@@ -127,8 +131,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          amount?: number | null
           assigned_ca?: string | null
           created_at?: string
+          document_url?: string | null
           id?: string
           notes?: string | null
           progress?: number

@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -40,91 +39,151 @@ serve(async (req) => {
     const userId = claimsData.claims.sub;
     const { amount, currency = "INR", description, service_request_id } = await req.json();
 
-    if (!amount || amount <= 0) {
-      return new Response(
-        JSON.stringify({ error: "Invalid amount" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // CRITICAL: Validate service request status before allowing payment
+    if (service_request_id) {
+      console.log("Validating service request:", service_request_id);
+      
+      const { data: serviceRequest, error: srError } = await supabase
+        .from("service_requests")
+        .select("id, status, amount, user_id")
+        .eq("id", service_request_id)
+        .single();
 
-    const razorpayKeyId = Deno.env.get("RAZORPAY_KEY_ID");
-    const razorpayKeySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
+      if (srError || !serviceRequest) {
+        console.error("Service request not found:", srError);
+        return new Response(
+          JSON.stringify({ error: "Service request not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    if (!razorpayKeyId || !razorpayKeySecret) {
-      console.error("Razorpay credentials not configured");
-      return new Response(
-        JSON.stringify({ error: "Payment gateway not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+      // Verify the service request belongs to the user
+      if (serviceRequest.user_id !== userId) {
+        console.error("Service request does not belong to user");
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: Service request does not belong to you" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    // Create Razorpay order
-    const amountInPaise = Math.round(amount * 100);
-    const orderPayload = {
-      amount: amountInPaise,
-      currency,
-      receipt: `receipt_${Date.now()}`,
-      notes: {
-        user_id: userId,
-        description: description || "Payment",
-      },
-    };
+      // Verify service is in "completed" status (not pending, in_progress, or already paid)
+      if (serviceRequest.status !== "completed") {
+        console.error("Service request status is not completed:", serviceRequest.status);
+        const statusMessages: Record<string, string> = {
+          pending: "Service is still pending. Payment will be enabled after completion.",
+          in_progress: "Service is still in progress. Payment will be enabled after completion.",
+          "in-progress": "Service is still in progress. Payment will be enabled after completion.",
+          paid: "This service has already been paid for.",
+          cancelled: "This service request has been cancelled.",
+        };
+        return new Response(
+          JSON.stringify({ 
+            error: statusMessages[serviceRequest.status] || "Service is not ready for payment" 
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    console.log("Creating Razorpay order:", orderPayload);
+      // Use the amount set by the CA/admin on the service request, not the client-provided amount
+      if (!serviceRequest.amount || serviceRequest.amount <= 0) {
+        return new Response(
+          JSON.stringify({ error: "Final amount has not been set by the CA yet" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    const razorpayResponse = await fetch("https://api.razorpay.com/v1/orders", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(`${razorpayKeyId}:${razorpayKeySecret}`)}`,
-      },
-      body: JSON.stringify(orderPayload),
-    });
+      // Override amount with the server-side value (add GST)
+      const gst = Math.round(serviceRequest.amount * 0.18);
+      const totalAmount = serviceRequest.amount + gst;
 
-    if (!razorpayResponse.ok) {
-      const errorText = await razorpayResponse.text();
-      console.error("Razorpay API error:", errorText);
-      return new Response(
-        JSON.stringify({ error: "Failed to create payment order" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+      console.log("Service request validated. Amount:", totalAmount);
 
-    const razorpayOrder = await razorpayResponse.json();
-    console.log("Razorpay order created:", razorpayOrder.id);
+      // Use the validated amount
+      const razorpayKeyId = Deno.env.get("RAZORPAY_KEY_ID");
+      const razorpayKeySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
 
-    // Store payment record in database
-    const { data: payment, error: dbError } = await supabase
-      .from("payments")
-      .insert({
-        user_id: userId,
-        service_request_id: service_request_id || null,
-        amount,
+      if (!razorpayKeyId || !razorpayKeySecret) {
+        console.error("Razorpay credentials not configured");
+        return new Response(
+          JSON.stringify({ error: "Payment gateway not configured" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const amountInPaise = Math.round(totalAmount * 100);
+      const orderPayload = {
+        amount: amountInPaise,
         currency,
-        razorpay_order_id: razorpayOrder.id,
-        status: "pending",
-        description: description || "Payment",
-      })
-      .select()
-      .single();
+        receipt: `receipt_${Date.now()}`,
+        notes: {
+          user_id: userId,
+          service_request_id,
+          description: description || "Service Payment",
+        },
+      };
 
-    if (dbError) {
-      console.error("Database error:", dbError);
+      console.log("Creating Razorpay order:", orderPayload);
+
+      const razorpayResponse = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${btoa(`${razorpayKeyId}:${razorpayKeySecret}`)}`,
+        },
+        body: JSON.stringify(orderPayload),
+      });
+
+      if (!razorpayResponse.ok) {
+        const errorText = await razorpayResponse.text();
+        console.error("Razorpay API error:", errorText);
+        return new Response(
+          JSON.stringify({ error: "Failed to create payment order" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const razorpayOrder = await razorpayResponse.json();
+      console.log("Razorpay order created:", razorpayOrder.id);
+
+      // Store payment record
+      const { data: payment, error: dbError } = await supabase
+        .from("payments")
+        .insert({
+          user_id: userId,
+          service_request_id,
+          amount: totalAmount,
+          currency,
+          razorpay_order_id: razorpayOrder.id,
+          status: "pending",
+          description: description || "Service Payment",
+        })
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error("Database error:", dbError);
+        return new Response(
+          JSON.stringify({ error: "Failed to record payment" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
-        JSON.stringify({ error: "Failed to record payment" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          order_id: razorpayOrder.id,
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency,
+          payment_id: payment.id,
+          key_id: razorpayKeyId,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Fallback: no service_request_id (reject - all payments must be tied to a service request)
     return new Response(
-      JSON.stringify({
-        order_id: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-        payment_id: payment.id,
-        key_id: razorpayKeyId,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "service_request_id is required" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error:", error);
