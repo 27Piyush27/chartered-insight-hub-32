@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { servicesData } from "@/lib/servicesData";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useState } from "react";
 import { 
   Calculator, 
   FileCheck, 
@@ -18,6 +20,8 @@ import {
   ArrowRight,
   IndianRupee,
   Sparkles,
+  Loader2,
+  Send,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -47,14 +51,54 @@ const stagger = {
 export default function Services() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [requestingId, setRequestingId] = useState<string | null>(null);
 
-  const handleEnroll = (serviceId: string) => {
+  const handleRequestService = async (serviceId: string) => {
     if (!user) {
-      toast.error("Please login to enroll in a service");
-      navigate("/auth", { state: { redirectTo: `/checkout/${serviceId}` } });
+      toast.error("Please login to request a service");
+      navigate("/auth", { state: { redirectTo: `/services` } });
       return;
     }
-    navigate(`/checkout/${serviceId}`);
+
+    setRequestingId(serviceId);
+
+    try {
+      // Check if user already has a pending/active request for this service
+      const { data: existing, error: checkError } = await supabase
+        .from("service_requests")
+        .select("id, status")
+        .eq("user_id", user.id)
+        .eq("service_id", serviceId)
+        .in("status", ["pending", "in_progress", "in-progress", "completed"]);
+
+      if (checkError) throw checkError;
+
+      if (existing && existing.length > 0) {
+        toast.info("You already have an active request for this service. Check your dashboard.");
+        navigate("/dashboard");
+        return;
+      }
+
+      // Create service request without payment
+      const { error: insertError } = await supabase
+        .from("service_requests")
+        .insert({
+          user_id: user.id,
+          service_id: serviceId,
+          status: "pending",
+          progress: 0,
+        });
+
+      if (insertError) throw insertError;
+
+      toast.success("Service requested successfully! Track progress on your dashboard.");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Error requesting service:", error);
+      toast.error("Failed to request service. Please try again.");
+    } finally {
+      setRequestingId(null);
+    }
   };
 
   return (
@@ -74,9 +118,31 @@ export default function Services() {
               Expert Financial Solutions
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Comprehensive CA services tailored to your needs. Select a service to get started with instant enrollment.
+              Request a service to get started. Our CA team will work on it and you'll only pay after the work is complete.
             </p>
           </motion.div>
+        </div>
+      </section>
+
+      {/* How It Works Banner */}
+      <section className="py-6 border-b border-border/50 bg-secondary/30">
+        <div className="container mx-auto px-6 lg:px-12">
+          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold">1</div>
+              <span>Request Service</span>
+            </div>
+            <ArrowRight className="w-4 h-4 hidden md:block" />
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold">2</div>
+              <span>CA Works on It</span>
+            </div>
+            <ArrowRight className="w-4 h-4 hidden md:block" />
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold">3</div>
+              <span>Review & Pay</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -128,17 +194,21 @@ export default function Services() {
                     <span>{service.duration}</span>
                   </div>
 
-                  {/* Pricing */}
-                  <div className="flex items-baseline gap-2 mb-6">
-                    <span className="text-2xl font-semibold flex items-center">
-                      <IndianRupee className="w-5 h-5" />
+                  {/* Pricing - shown as starting price */}
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-sm text-muted-foreground">Starting from</span>
+                    <span className="text-xl font-semibold flex items-center">
+                      <IndianRupee className="w-4 h-4" />
                       {service.price.toLocaleString()}
                     </span>
-                    {service.originalPrice && (
-                      <span className="text-sm text-muted-foreground line-through">
-                        ₹{service.originalPrice.toLocaleString()}
-                      </span>
-                    )}
+                  </div>
+
+                  {/* Pay Later Notice */}
+                  <div className="rounded-lg bg-secondary/50 p-3 mb-6">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+                      Payment will be enabled after service completion
+                    </p>
                   </div>
 
                   {/* Features Preview */}
@@ -158,11 +228,21 @@ export default function Services() {
 
                   {/* CTA Button */}
                   <Button
-                    onClick={() => handleEnroll(service.id)}
+                    onClick={() => handleRequestService(service.id)}
+                    disabled={requestingId === service.id}
                     className="w-full group/btn"
                   >
-                    Enroll Now
-                    <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover/btn:translate-x-1" />
+                    {requestingId === service.id ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Requesting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Request Service
+                      </>
+                    )}
                   </Button>
                 </div>
               </motion.div>

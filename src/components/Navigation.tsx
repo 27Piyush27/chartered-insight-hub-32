@@ -9,7 +9,7 @@ export const Navigation = () => {
   const location = useLocation();
   const [isDark, setIsDark] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, profile, signOut, loading } = useAuth();
+  const { user, profile, role, signOut, loading } = useAuth();
 
   useEffect(() => {
     const darkMode = localStorage.getItem("darkMode") === "true";
@@ -37,6 +37,7 @@ export const Navigation = () => {
     { name: "Services", path: "/services" },
     { name: "Contact", path: "/contact" },
     { name: "Dashboard", path: "/dashboard" },
+    ...((role === "admin" || role === "ca") ? [{ name: "Admin", path: "/admin" }] : []),
   ];
 
   const displayName = profile?.name || user?.email?.split("@")[0] || "";

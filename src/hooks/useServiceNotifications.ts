@@ -19,7 +19,9 @@ interface ServiceRequestRow {
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
   "in-progress": "In Progress",
+  in_progress: "In Progress",
   completed: "Completed",
+  paid: "Paid",
   cancelled: "Cancelled",
 };
 
@@ -28,9 +30,17 @@ const STATUS_MESSAGES: Record<string, { title: string; description: string }> = 
     title: "🚀 Service Started",
     description: "Your service request is now being worked on by our CA team.",
   },
+  in_progress: {
+    title: "🚀 Service Started",
+    description: "Your service request is now being worked on by our CA team.",
+  },
   completed: {
-    title: "✅ Service Completed",
-    description: "Your service request has been completed successfully!",
+    title: "✅ Service Completed — Payment Available",
+    description: "Your service is completed! You can now make the payment from your dashboard.",
+  },
+  paid: {
+    title: "💳 Payment Confirmed",
+    description: "Your payment has been received. Thank you!",
   },
   cancelled: {
     title: "❌ Service Cancelled",
