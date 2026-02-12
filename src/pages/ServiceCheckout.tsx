@@ -151,11 +151,7 @@ export default function ServiceCheckout() {
               return;
             }
 
-            // Update service request status
-            await supabase
-              .from("service_requests")
-              .update({ status: "in_progress", progress: 10 })
-              .eq("id", serviceRequest.id);
+            // Service status is updated to "paid" by the verification edge function.
 
             // Navigate to confirmation page
             navigate(`/payment-success`, {
