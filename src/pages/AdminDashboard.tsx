@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Shield,
@@ -379,133 +379,10 @@ export default function AdminDashboard() {
                         </Button>
                       )}
                       {request.status !== "paid" && (
-                        <Dialog open={dialogOpen && selectedRequest?.id === request.id} onOpenChange={(open) => {
-                          if (open) openManageDialog(request);
-                          else setDialogOpen(false);
-                        }}>
-                          <DialogTrigger asChild>
-                            <Button size="sm">
-                              <Eye className="w-4 h-4 mr-1" />
-                              Manage
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-lg">
-                            <DialogHeader>
-                              <DialogTitle>
-                                Manage: {selectedRequest?.services?.name || selectedRequest?.service_id}
-                              </DialogTitle>
-                              <DialogDescription>
-                                Client: {selectedRequest?.profiles?.name} ({selectedRequest?.profiles?.email})
-                              </DialogDescription>
-                            </DialogHeader>
-
-                            <div className="space-y-4 pt-4">
-                              {/* Status */}
-                              <div className="space-y-2">
-                                <Label>Status</Label>
-                                <Select value={updateStatus} onValueChange={setUpdateStatus}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {STATUS_OPTIONS.map((opt) => (
-                                      <SelectItem key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              {/* Progress */}
-                              <div className="space-y-2">
-                                <Label>Progress (%)</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  value={updateProgress}
-                                  onChange={(e) => setUpdateProgress(e.target.value)}
-                                />
-                              </div>
-
-                              {/* Amount */}
-                              <div className="space-y-2">
-                                <Label>Final Amount (₹)</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  placeholder="Set the final billable amount"
-                                  value={updateAmount}
-                                  onChange={(e) => setUpdateAmount(e.target.value)}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                  Required before marking as completed. Client will be charged this amount + 18% GST.
-                                </p>
-                              </div>
-
-                              {/* Notes */}
-                              <div className="space-y-2">
-                                <Label>Notes for Client</Label>
-                                <Textarea
-                                  placeholder="Add notes visible to the client..."
-                                  value={updateNotes}
-                                  onChange={(e) => setUpdateNotes(e.target.value)}
-                                  rows={3}
-                                />
-                              </div>
-
-                              <Separator />
-
-                              {/* Client Documents Review */}
-                              {selectedRequest && (
-                                <CADocumentReview
-                                  serviceRequestId={selectedRequest.id}
-                                  clientName={selectedRequest.profiles?.name}
-                                />
-                              )}
-
-                              <Separator />
-
-                              {/* Document Upload */}
-                              <div className="space-y-2">
-                                <Label>Upload Final Documents</Label>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="file"
-                                    onChange={handleDocumentUpload}
-                                    disabled={uploading}
-                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.zip"
-                                  />
-                                  {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                                </div>
-                                {selectedRequest?.document_url && (
-                                  <p className="text-xs text-green-600 flex items-center gap-1">
-                                    <CheckCircle className="w-3 h-3" />
-                                    Document uploaded
-                                  </p>
-                                )}
-                              </div>
-
-                              <Separator />
-
-                              {/* Save */}
-                              <div className="flex justify-end gap-2">
-                                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                                  Cancel
-                                </Button>
-                                <Button onClick={handleSaveUpdate} disabled={saving}>
-                                  {saving ? (
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <Send className="w-4 h-4 mr-2" />
-                                  )}
-                                  {updateStatus === "completed" ? "Complete & Notify Client" : "Save Changes"}
-                                </Button>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                        <Button size="sm" onClick={() => openManageDialog(request)}>
+                          <Eye className="w-4 h-4 mr-1" />
+                          Manage
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -514,6 +391,121 @@ export default function AdminDashboard() {
             ))}
           </div>
         )}
+
+        {/* Single Manage Dialog outside the list */}
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          if (!open) setDialogOpen(false);
+        }}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Manage: {selectedRequest?.services?.name || selectedRequest?.service_id}
+              </DialogTitle>
+              <DialogDescription>
+                Client: {selectedRequest?.profiles?.name} ({selectedRequest?.profiles?.email})
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={updateStatus} onValueChange={setUpdateStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Progress (%)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={updateProgress}
+                  onChange={(e) => setUpdateProgress(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Final Amount (₹)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="Set the final billable amount"
+                  value={updateAmount}
+                  onChange={(e) => setUpdateAmount(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Required before marking as completed. Client will be charged this amount + 18% GST.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notes for Client</Label>
+                <Textarea
+                  placeholder="Add notes visible to the client..."
+                  value={updateNotes}
+                  onChange={(e) => setUpdateNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <Separator />
+
+              {selectedRequest && (
+                <CADocumentReview
+                  serviceRequestId={selectedRequest.id}
+                  clientName={selectedRequest.profiles?.name}
+                />
+              )}
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label>Upload Final Documents</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    onChange={handleDocumentUpload}
+                    disabled={uploading}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.zip"
+                  />
+                  {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
+                {selectedRequest?.document_url && (
+                  <p className="text-xs text-green-600 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    Document uploaded
+                  </p>
+                )}
+              </div>
+
+              <Separator />
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveUpdate} disabled={saving}>
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4 mr-2" />
+                  )}
+                  {updateStatus === "completed" ? "Complete & Notify Client" : "Save Changes"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
