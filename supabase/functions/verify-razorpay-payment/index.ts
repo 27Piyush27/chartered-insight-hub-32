@@ -43,11 +43,46 @@ serve(async (req) => {
       );
     }
 
+    const userId = userData.user.id;
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, payment_id } = await req.json();
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !payment_id) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: existingPayment, error: paymentFetchError } = await supabase
+      .from("payments")
+      .select("id, user_id, status, service_request_id, razorpay_order_id")
+      .eq("id", payment_id)
+      .single();
+
+    if (paymentFetchError || !existingPayment) {
+      return new Response(
+        JSON.stringify({ error: "Payment not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (existingPayment.user_id !== userId) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized payment access" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (existingPayment.status === "completed") {
+      return new Response(
+        JSON.stringify({ success: true, message: "Payment already verified" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (existingPayment.razorpay_order_id !== razorpay_order_id) {
+      return new Response(
+        JSON.stringify({ error: "Payment order mismatch" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -71,7 +106,7 @@ serve(async (req) => {
     if (expectedSignature !== razorpay_signature) {
       console.error("Signature verification failed");
       
-      await supabase
+      await supabaseAdmin
         .from("payments")
         .update({
           status: "failed",
@@ -87,7 +122,7 @@ serve(async (req) => {
     }
 
     // Update payment as completed
-    const { data: payment, error: updateError } = await supabase
+    const { data: payment, error: updateError } = await supabaseAdmin
       .from("payments")
       .update({
         status: "completed",

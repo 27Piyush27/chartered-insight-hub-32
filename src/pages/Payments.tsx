@@ -187,15 +187,18 @@ export default function Payments() {
 
             if (verifyError || !verifyData?.success) {
               toast.error("Payment verification failed");
+              setPayingRequestId(null);
               return;
             }
 
             toast.success("Payment successful! Your service is now marked as paid.");
+            setPayingRequestId(null);
             fetchPayments();
             fetchPayableRequests();
           } catch (err) {
             console.error("Verification error:", err);
             toast.error("Payment verification failed");
+            setPayingRequestId(null);
           }
         },
         prefill: {
@@ -223,7 +226,6 @@ export default function Payments() {
     } catch (error) {
       console.error("Payment error:", error);
       toast.error("Failed to initialize payment. Please try again.");
-    } finally {
       setPayingRequestId(null);
     }
   };
