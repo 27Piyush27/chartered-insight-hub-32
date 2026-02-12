@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -19,18 +17,10 @@ import {
   Zap,
   Loader2,
   AlertCircle,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-
-interface PaymentPlan {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  features: string[];
-  popular?: boolean;
-}
 
 interface Payment {
   id: string;
@@ -42,48 +32,14 @@ interface Payment {
   created_at: string;
 }
 
-const paymentPlans: PaymentPlan[] = [
-  {
-    id: "basic",
-    name: "Basic Consultation",
-    price: 2999,
-    description: "One-time consultation for individuals",
-    features: [
-      "1 Hour Consultation",
-      "Tax Planning Advice",
-      "Document Review",
-      "Email Support",
-    ],
-  },
-  {
-    id: "standard",
-    name: "Standard Package",
-    price: 9999,
-    description: "Comprehensive tax filing services",
-    features: [
-      "Complete ITR Filing",
-      "Tax Optimization",
-      "Quarterly Reviews",
-      "Priority Support",
-      "Compliance Check",
-    ],
-    popular: true,
-  },
-  {
-    id: "premium",
-    name: "Premium Package",
-    price: 24999,
-    description: "Full-service accounting & tax",
-    features: [
-      "Everything in Standard",
-      "GST Filing",
-      "Bookkeeping",
-      "Audit Support",
-      "Dedicated CA",
-      "24/7 Support",
-    ],
-  },
-];
+interface PayableServiceRequest {
+  id: string;
+  service_id: string;
+  status: string;
+  amount: number | null;
+  created_at: string;
+  services: { name: string } | null;
+}
 
 declare global {
   interface Window {
@@ -94,11 +50,12 @@ declare global {
 export default function Payments() {
   const navigate = useNavigate();
   const { user, profile, session, loading: authLoading } = useAuth();
-  const [customAmount, setCustomAmount] = useState("");
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [payableRequests, setPayableRequests] = useState<PayableServiceRequest[]>([]);
+  const [loadingPayable, setLoadingPayable] = useState(true);
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [payingRequestId, setPayingRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -106,7 +63,6 @@ export default function Payments() {
       return;
     }
 
-    // Load Razorpay script
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
@@ -115,6 +71,7 @@ export default function Payments() {
 
     if (user) {
       fetchPayments();
+      fetchPayableRequests();
     }
 
     return () => {
@@ -140,7 +97,25 @@ export default function Payments() {
     }
   };
 
-  const handlePayment = async (amount: number, description: string) => {
+  const fetchPayableRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("service_requests")
+        .select("id, service_id, status, amount, created_at, services(name)")
+        .eq("status", "completed")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setPayableRequests(data || []);
+    } catch (error) {
+      console.error("Error fetching payable requests:", error);
+      toast.error("Failed to load payable services");
+    } finally {
+      setLoadingPayable(false);
+    }
+  };
+
+  const handlePayment = async (request: PayableServiceRequest) => {
     if (!razorpayLoaded) {
       toast.error("Payment gateway is loading. Please try again.");
       return;
@@ -152,37 +127,51 @@ export default function Payments() {
       return;
     }
 
-    setIsLoading(true);
+    if (request.status !== "completed") {
+      toast.error("Payment is available only after CA marks this service as completed.");
+      return;
+    }
+
+    if (!request.amount || request.amount <= 0) {
+      toast.error("Final amount has not been set by your CA yet.");
+      return;
+    }
+
+    const serviceName = request.services?.name || request.service_id;
+    setPayingRequestId(request.id);
 
     try {
-      // Create order via edge function
       const { data, error } = await supabase.functions.invoke("create-razorpay-order", {
-        body: { amount, description },
+        body: {
+          amount: request.amount,
+          description: serviceName,
+          service_request_id: request.id,
+        },
       });
 
       if (error) {
         console.error("Edge function error:", error);
         toast.error("Failed to create payment order");
-        setIsLoading(false);
         return;
       }
 
       if (!data?.order_id || !data?.key_id) {
-        toast.error("Invalid response from payment server");
-        setIsLoading(false);
+        if (data?.error) {
+          toast.error(data.error);
+        } else {
+          toast.error("Invalid response from payment server");
+        }
         return;
       }
 
-      // Initialize Razorpay
       const options = {
         key: data.key_id,
         amount: data.amount,
         currency: data.currency,
         name: "GMR & Associates",
-        description: description,
+        description: `Payment for ${serviceName}`,
         order_id: data.order_id,
         handler: async function (response: any) {
-          // Verify payment
           try {
             const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
               "verify-razorpay-payment",
@@ -198,26 +187,31 @@ export default function Payments() {
 
             if (verifyError || !verifyData?.success) {
               toast.error("Payment verification failed");
+              setPayingRequestId(null);
               return;
             }
 
-            toast.success("Payment successful! Thank you for your purchase.");
+            toast.success("Payment successful! Your service is now marked as paid.");
+            setPayingRequestId(null);
             fetchPayments();
+            fetchPayableRequests();
           } catch (err) {
             console.error("Verification error:", err);
             toast.error("Payment verification failed");
+            setPayingRequestId(null);
           }
         },
         prefill: {
           name: profile?.name || "",
           email: user?.email || "",
+          contact: profile?.phone || "",
         },
         theme: {
           color: "#0f172a",
         },
         modal: {
           ondismiss: function () {
-            setIsLoading(false);
+            setPayingRequestId(null);
             toast.info("Payment cancelled");
           },
         },
@@ -226,24 +220,14 @@ export default function Payments() {
       const razorpay = new window.Razorpay(options);
       razorpay.on("payment.failed", function (response: any) {
         toast.error(`Payment failed: ${response.error.description}`);
-        setIsLoading(false);
+        setPayingRequestId(null);
       });
       razorpay.open();
     } catch (error) {
       console.error("Payment error:", error);
       toast.error("Failed to initialize payment. Please try again.");
-    } finally {
-      setIsLoading(false);
+      setPayingRequestId(null);
     }
-  };
-
-  const handleCustomPayment = () => {
-    const amount = parseFloat(customAmount);
-    if (isNaN(amount) || amount < 1) {
-      toast.error("Please enter a valid amount");
-      return;
-    }
-    handlePayment(amount, "Custom Payment");
   };
 
   const getStatusIcon = (status: string) => {
@@ -265,14 +249,6 @@ export default function Payments() {
     visible: { opacity: 1, y: 0 },
   };
 
-  const stagger = {
-    visible: {
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -283,7 +259,6 @@ export default function Payments() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <div className="bg-foreground text-background py-16">
         <div className="container mx-auto px-4">
           <Button
@@ -294,30 +269,17 @@ export default function Payments() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={fadeIn}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
-              Payments
-            </h1>
+          <motion.div initial="hidden" animate="visible" variants={fadeIn} transition={{ duration: 0.5 }}>
+            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">Payments</h1>
             <p className="text-background/70 text-lg max-w-2xl">
-              Choose a service package or make a custom payment securely through Razorpay.
+              Payments are enabled only after your CA marks the service as completed.
             </p>
           </motion.div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12">
-        {/* Trust Badges */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeIn}
-          className="flex flex-wrap justify-center gap-6 mb-12"
-        >
+      <div className="container mx-auto px-4 py-12 space-y-12">
+        <motion.div initial="hidden" animate="visible" variants={fadeIn} className="flex flex-wrap justify-center gap-6">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Shield className="w-5 h-5 text-green-500" />
             <span className="text-sm">Secure Payments</span>
@@ -327,114 +289,84 @@ export default function Payments() {
             <span className="text-sm">Instant Confirmation</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
-            <CreditCard className="w-5 h-5 text-blue-500" />
-            <span className="text-sm">All Cards Accepted</span>
+            <Lock className="w-5 h-5 text-blue-500" />
+            <span className="text-sm">Pay only after completion</span>
           </div>
         </motion.div>
 
-        {/* Pricing Plans */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={stagger}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
-        >
-          {paymentPlans.map((plan) => (
-            <motion.div key={plan.id} variants={fadeIn}>
-              <Card
-                className={`relative h-full transition-all duration-300 hover:shadow-xl ${
-                  plan.popular ? "border-primary shadow-lg scale-105" : "border-border"
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
-                  </div>
-                )}
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold">₹{plan.price.toLocaleString()}</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-center gap-2 text-sm">
-                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    onClick={() => handlePayment(plan.price, plan.name)}
-                    disabled={isLoading || !razorpayLoaded}
-                    className="w-full"
-                    variant={plan.popular ? "default" : "outline"}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <IndianRupee className="w-4 h-4 mr-1" />
-                    )}
-                    Pay ₹{plan.price.toLocaleString()}
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Custom Payment */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeIn}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="max-w-md mx-auto mb-12">
+        <motion.div initial="hidden" animate="visible" variants={fadeIn}>
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="w-5 h-5" />
-                Custom Payment
+                Services Ready for Payment
               </CardTitle>
               <CardDescription>
-                Enter a custom amount for specific services
+                Only services in completed state with final amount set by your CA appear here.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount (₹)</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="amount"
-                      type="number"
-                      placeholder="Enter amount"
-                      value={customAmount}
-                      onChange={(e) => setCustomAmount(e.target.value)}
-                      className="pl-9"
-                      min="1"
-                    />
-                  </div>
-                  <Button onClick={handleCustomPayment} disabled={isLoading || !razorpayLoaded}>
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pay Now"}
-                  </Button>
+            <CardContent>
+              {loadingPayable ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-              </div>
+              ) : payableRequests.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No services are ready for payment yet.</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Once your CA marks a request as completed, it will show up here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {payableRequests.map((request, index) => {
+                    const baseAmount = request.amount || 0;
+                    const gst = Math.round(baseAmount * 0.18);
+                    const total = baseAmount + gst;
+                    const serviceName = request.services?.name || request.service_id;
+
+                    return (
+                      <div key={request.id}>
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-3">
+                          <div>
+                            <p className="font-medium">{serviceName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Requested on {new Date(request.created_at).toLocaleDateString("en-IN")}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              ₹{baseAmount.toLocaleString()} + GST (18%): ₹{gst.toLocaleString()} =
+                              <span className="font-semibold text-foreground"> ₹{total.toLocaleString()}</span>
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() => handlePayment(request)}
+                            disabled={payingRequestId === request.id || !razorpayLoaded || baseAmount <= 0}
+                          >
+                            {payingRequestId === request.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <IndianRupee className="w-4 h-4 mr-1" />
+                                Pay ₹{total.toLocaleString()}
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        {index < payableRequests.length - 1 && <Separator />}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Payment History */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeIn}
-          transition={{ delay: 0.4 }}
-        >
+        <motion.div initial="hidden" animate="visible" variants={fadeIn}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
