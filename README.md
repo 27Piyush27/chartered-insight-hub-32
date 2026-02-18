@@ -14,9 +14,9 @@ A modern web application for Chartered Accountants (CA) and clients to collabora
 ## Tech stack
 
 - Vite
-- React + TypeScript
-- Tailwind CSS
-- shadcn/ui
+- React (JavaScript / JSX)
+- Plain CSS (compiled stylesheet committed in `src/index.css`)
+- shadcn/ui + Radix UI primitives
 - Supabase (Auth, Database, Storage, Edge Functions)
 
 ## Local development
@@ -26,14 +26,19 @@ A modern web application for Chartered Accountants (CA) and clients to collabora
 - Node.js 18+
 - npm
 
-### Run locally
+### Install dependencies
 
 ```bash
 npm install
+```
+
+### Run locally
+
+```bash
 npm run dev
 ```
 
-By default the app runs on Vite dev server.
+By default the app runs on the Vite dev server.
 
 ## Build
 
@@ -52,11 +57,20 @@ npm run lint
 - `src/pages` — route-level pages
 - `src/components` — reusable UI and feature components
 - `src/contexts` — auth and app contexts
+- `src/hooks` — custom React hooks
 - `src/lib` — utility modules and data helpers
+- `src/integrations/supabase` — Supabase client/config integration
 - `supabase/functions` — edge functions (payment/order verification etc.)
 - `supabase/migrations` — DB schema migrations
 
-## Notes
+## Payment flow notes
 
 - Payment is intended to happen only after a CA marks a service request as completed.
+- Razorpay order creation/verification is handled through Supabase Edge Functions.
 - Keep environment variables configured for Supabase and Razorpay before testing payments.
+
+## Configuration notes
+
+- Main app entrypoint: `src/main.jsx`
+- Vite config: `vite.config.js`
+- Tailwind config (used for CSS generation workflow): `tailwind.config.js`
