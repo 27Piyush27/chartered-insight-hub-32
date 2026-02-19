@@ -24,7 +24,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 function Payments() {
   const navigate = useNavigate();
-  const { user, profile, session, loading: authLoading } = useAuth();
+  const { user, profile, session, role, loading: authLoading } = useAuth();
   const [payments, setPayments] = useState([]);
   const [payableRequests, setPayableRequests] = useState([]);
   const [loadingPayable, setLoadingPayable] = useState(true);
@@ -34,6 +34,11 @@ function Payments() {
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/auth");
+      return;
+    }
+    if (!authLoading && user && role !== "client") {
+      toast.error("Only clients can access the payment page.");
+      navigate("/admin");
       return;
     }
     const script = document.createElement("script");
@@ -50,10 +55,11 @@ function Payments() {
         document.body.removeChild(script);
       }
     };
-  }, [user, authLoading, navigate]);
+  }, [user, role, authLoading, navigate]);
   const fetchPayments = async () => {
+    if (!user) return;
     try {
-      const { data, error } = await supabase.from("payments").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
       if (error) throw error;
       setPayments(data || []);
     } catch (error) {
@@ -63,8 +69,9 @@ function Payments() {
     }
   };
   const fetchPayableRequests = async () => {
+    if (!user) return;
     try {
-      const { data, error } = await supabase.from("service_requests").select("id, service_id, status, amount, created_at, services(name)").eq("status", "completed").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("service_requests").select("id, service_id, status, amount, created_at, services(name)").eq("user_id", user.id).eq("status", "completed").order("created_at", { ascending: false });
       if (error) throw error;
       setPayableRequests(data || []);
     } catch (error) {
@@ -194,7 +201,7 @@ function Payments() {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
-  if (authLoading || !user) {
+  if (authLoading || !user || role !== "client") {
     return /* @__PURE__ */ jsx("div", { className: "min-h-screen flex items-center justify-center", children: /* @__PURE__ */ jsx(Loader2, { className: "h-8 w-8 animate-spin text-primary" }) });
   }
   return /* @__PURE__ */ jsxs("div", { className: "min-h-screen bg-background", children: [

@@ -25,18 +25,20 @@ import { useServiceNotifications } from "@/hooks/useServiceNotifications";
 import { ServiceStatusStepper } from "@/components/ServiceStatusStepper";
 import { ServicePaymentButton } from "@/components/ServicePaymentButton";
 import { ClientDocumentUpload } from "@/components/ClientDocumentUpload";
+import { ChatbotWidget } from "@/components/ChatbotWidget";
 function Dashboard() {
   const navigate = useNavigate();
   const { user, profile, role, loading: authLoading } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
-  const fetchServiceRequests = useCallback(async () => {
+  const fetchServiceRequests = useCallback(async (userId) => {
+    if (!userId) return;
     try {
       const { data, error } = await supabase.from("service_requests").select(`
           id, user_id, service_id, status, progress, notes,
           amount, document_url, created_at,
           services (name)
-        `).order("created_at", { ascending: false });
+        `).eq("user_id", userId).order("created_at", { ascending: false });
       if (error) throw error;
       setRequests(data || []);
     } catch (error) {
@@ -45,7 +47,7 @@ function Dashboard() {
       setLoadingRequests(false);
     }
   }, []);
-  useServiceNotifications(fetchServiceRequests);
+  useServiceNotifications(() => fetchServiceRequests(user?.id));
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -62,10 +64,14 @@ function Dashboard() {
       navigate("/auth");
       return;
     }
-    if (user) {
-      fetchServiceRequests();
+    if (!authLoading && (role === "admin" || role === "ca")) {
+      navigate("/admin");
+      return;
     }
-  }, [user, authLoading, navigate, fetchServiceRequests]);
+    if (user && role === "client") {
+      fetchServiceRequests(user.id);
+    }
+  }, [user, role, authLoading, navigate, fetchServiceRequests]);
   const handleDownloadDocument = async (documentUrl) => {
     try {
       const { data, error } = await supabase.storage.from("service-documents").download(documentUrl);
@@ -250,7 +256,7 @@ function Dashboard() {
               serviceName: request.services?.name || request.service_id,
               amount: request.amount,
               status: request.status,
-              onPaymentSuccess: fetchServiceRequests
+              onPaymentSuccess: () => fetchServiceRequests(user.id)
             }
           )
         ] }) }, request.id)) }) })
@@ -271,9 +277,11 @@ function Dashboard() {
           /* @__PURE__ */ jsx(CardContent, { children: /* @__PURE__ */ jsx(Button, { onClick: () => navigate("/services"), variant: "outline", className: "w-full", children: "Browse Services" }) })
         ] })
       ] })
-    ] })
+    ] }),
+    /* @__PURE__ */ jsx(ChatbotWidget, { role })
   ] });
 }
+
 export {
   Dashboard as default
 };

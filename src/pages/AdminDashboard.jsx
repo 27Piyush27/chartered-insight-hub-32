@@ -28,6 +28,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ServiceStatusStepper } from "@/components/ServiceStatusStepper";
 import { CADocumentReview } from "@/components/CADocumentReview";
+import { ChatbotWidget } from "@/components/ChatbotWidget";
 const STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },
   { value: "in_progress", label: "In Progress" },
@@ -370,9 +371,11 @@ function AdminDashboard() {
           ] })
         ] })
       ] }) })
-    ] })
+    ] }),
+    /* @__PURE__ */ jsx(ChatbotWidget, { role })
   ] });
 }
+
 export {
   AdminDashboard as default
 };

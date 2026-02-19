@@ -26,136 +26,46 @@ import { getServiceById } from "@/lib/servicesData";
 function ServiceCheckout() {
   const { serviceId } = useParams();
   const navigate = useNavigate();
-  const { user, profile, session, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const [service, setService] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    script.onload = () => setRazorpayLoaded(true);
-    document.body.appendChild(script);
     const foundService = getServiceById(serviceId || "");
     if (foundService) {
       setService(foundService);
     }
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
   }, [serviceId]);
   useEffect(() => {
     if (!authLoading && !user) {
       toast.error("Please login to continue");
       navigate("/auth", { state: { redirectTo: `/checkout/${serviceId}` } });
-    }
-  }, [user, authLoading, navigate, serviceId]);
-  const handlePayment = async () => {
-    if (!service) return;
-    if (!razorpayLoaded) {
-      toast.error("Payment gateway is loading. Please try again.");
       return;
     }
-    if (!session?.access_token) {
-      toast.error("Please log in to make a payment");
-      navigate("/auth");
-      return;
+    if (!authLoading && user && role && role !== "client") {
+      toast.error("Only clients can request services from checkout.");
+      navigate("/admin");
     }
+  }, [user, role, authLoading, navigate, serviceId]);
+  const handleRequestService = async () => {
+    if (!service || !user) return;
     setIsLoading(true);
     try {
-      const { data: serviceRequest, error: requestError } = await supabase.from("service_requests").insert({
+      const { error: requestError } = await supabase.from("service_requests").insert({
         user_id: user.id,
         service_id: service.id,
         status: "pending",
         progress: 0
-      }).select().single();
+      });
       if (requestError) {
         console.error("Service request error:", requestError);
         toast.error("Failed to create service request");
-        setIsLoading(false);
         return;
       }
-      const { data, error } = await supabase.functions.invoke("create-razorpay-order", {
-        body: {
-          amount: service.price,
-          description: service.title,
-          service_request_id: serviceRequest.id
-        }
-      });
-      if (error) {
-        console.error("Edge function error:", error);
-        toast.error("Failed to create payment order");
-        setIsLoading(false);
-        return;
-      }
-      if (!data?.order_id || !data?.key_id) {
-        toast.error("Invalid response from payment server");
-        setIsLoading(false);
-        return;
-      }
-      const options = {
-        key: data.key_id,
-        amount: data.amount,
-        currency: data.currency,
-        name: "GMR & Associates",
-        description: service.title,
-        order_id: data.order_id,
-        handler: async function(response) {
-          try {
-            const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
-              "verify-razorpay-payment",
-              {
-                body: {
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  payment_id: data.payment_id
-                }
-              }
-            );
-            if (verifyError || !verifyData?.success) {
-              toast.error("Payment verification failed");
-              return;
-            }
-            navigate(`/payment-success`, {
-              state: {
-                service,
-                paymentId: response.razorpay_payment_id,
-                orderId: response.razorpay_order_id,
-                amount: service.price
-              }
-            });
-          } catch (err) {
-            console.error("Verification error:", err);
-            toast.error("Payment verification failed");
-          }
-        },
-        prefill: {
-          name: profile?.name || "",
-          email: user?.email || "",
-          contact: profile?.phone || ""
-        },
-        theme: {
-          color: "#000000"
-        },
-        modal: {
-          ondismiss: function() {
-            setIsLoading(false);
-            toast.info("Payment cancelled");
-          }
-        }
-      };
-      const razorpay = new window.Razorpay(options);
-      razorpay.on("payment.failed", function(response) {
-        toast.error(`Payment failed: ${response.error.description}`);
-        setIsLoading(false);
-      });
-      razorpay.open();
+      toast.success("Service requested successfully. Your CA will review and mark it completed before payment is enabled.");
+      navigate("/dashboard");
     } catch (error) {
-      console.error("Payment error:", error);
-      toast.error("Failed to initialize payment. Please try again.");
+      console.error("Service request error:", error);
+      toast.error("Failed to submit service request. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -192,7 +102,7 @@ function ServiceCheckout() {
           initial: { opacity: 0, y: 10 },
           animate: { opacity: 1, y: 0 },
           className: "text-3xl md:text-4xl font-semibold tracking-tight",
-          children: "Complete Your Enrollment"
+          children: "Request Service"
         }
       )
     ] }) }),
@@ -232,7 +142,7 @@ function ServiceCheckout() {
             /* @__PURE__ */ jsxs(Card, { className: "border-border/50", children: [
               /* @__PURE__ */ jsx(CardHeader, { children: /* @__PURE__ */ jsxs(CardTitle, { className: "text-lg flex items-center gap-2", children: [
                 /* @__PURE__ */ jsx(Lock, { className: "w-4 h-4" }),
-                "Secure Payment Options"
+                "Service Request Flow"
               ] }) }),
               /* @__PURE__ */ jsx(CardContent, { children: /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-3 gap-4", children: [
                 /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center p-4 rounded-lg bg-secondary/50 text-center", children: [
@@ -297,7 +207,7 @@ function ServiceCheckout() {
               ] }),
               /* @__PURE__ */ jsx(Separator, {}),
               /* @__PURE__ */ jsxs("div", { className: "flex justify-between text-lg font-semibold", children: [
-                /* @__PURE__ */ jsx("span", { children: "Total Payable" }),
+                /* @__PURE__ */ jsx("span", { children: "Estimated Cost" }),
                 /* @__PURE__ */ jsxs("span", { className: "flex items-center", children: [
                   /* @__PURE__ */ jsx(IndianRupee, { className: "w-4 h-4" }),
                   total.toLocaleString()
@@ -306,8 +216,8 @@ function ServiceCheckout() {
               /* @__PURE__ */ jsx(
                 Button,
                 {
-                  onClick: handlePayment,
-                  disabled: isLoading || !razorpayLoaded,
+                  onClick: handleRequestService,
+                  disabled: isLoading,
                   className: "w-full h-12 text-base",
                   size: "lg",
                   children: isLoading ? /* @__PURE__ */ jsxs(Fragment, { children: [
@@ -315,15 +225,14 @@ function ServiceCheckout() {
                     "Processing..."
                   ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
                     /* @__PURE__ */ jsx(Lock, { className: "w-4 h-4 mr-2" }),
-                    "Pay \u20B9",
-                    total.toLocaleString()
+                    "Request Service"
                   ] })
                 }
               ),
               /* @__PURE__ */ jsxs("div", { className: "pt-4 space-y-3", children: [
                 /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-xs text-muted-foreground", children: [
                   /* @__PURE__ */ jsx(Shield, { className: "w-4 h-4 text-foreground" }),
-                  /* @__PURE__ */ jsx("span", { children: "100% Secure & Encrypted Payment" })
+                  /* @__PURE__ */ jsx("span", { children: "Pay later: enabled only after CA marks service as completed" })
                 ] }),
                 /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 text-xs text-muted-foreground", children: [
                   /* @__PURE__ */ jsx(CheckCircle, { className: "w-4 h-4 text-foreground" }),
